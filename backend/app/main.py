@@ -1,0 +1,32 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.database import create_tables
+import app.models  # noqa: F401 — registers all models with SQLAlchemy Base
+from app.routers import auth, chat
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_tables()
+    yield
+
+
+app = FastAPI(title="Aria Voice Assistant API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(chat.router)
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
